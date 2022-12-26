@@ -12,6 +12,7 @@ import { BASKET_KEY } from "../utils/keys";
 interface State {
   loading: boolean;
   addItem?: (product: Product) => void;
+  removeItem?: (product: Product) => void;
   products?: Product[] | any[];
 }
 
@@ -53,10 +54,31 @@ function BP({ children }: BasketProps) {
 
   const addItem = useCallback((product: Product) => {
     const items = retrieve();
-    const newItems = items ? [...items, product] : [product];
+    console.log(items);
+
+    let newItems;
+    if (items) {
+      const itemExists = items.findIndex(
+        (item: Product) => item.id === product.id
+      );
+      const itemInQuestion = items.find(
+        (item: Product) => item.id === product.id
+      );
+      const itemsList =
+        itemExists > -1
+          ? items.splice(itemExists, 1)
+          : [...items, { ...product, quantity: 1 }];
+      newItems =
+        itemExists > -1
+          ? [...itemsList, { ...product, quantity: itemInQuestion.quanity++ }]
+          : itemsList;
+    } else {
+      newItems = [{ ...product, quantity: 1 }];
+    }
     persist(newItems);
     setState({ ...state, products: newItems });
   }, []);
+
 
   const removeItem = useCallback((product: Product) => {
     const items = retrieve();
@@ -69,6 +91,7 @@ function BP({ children }: BasketProps) {
     ...state,
     setState,
     addItem,
+    removeItem,
   };
 
   return (

@@ -88,6 +88,7 @@ model User {
   username  String   @unique
   email         String   @unique
   password      String
+  stripeId      String
   emailVerified DateTime?
   image         String?
   role          String  @default("USER")

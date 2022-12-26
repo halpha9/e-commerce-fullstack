@@ -25,6 +25,7 @@ const SignUp: NextPage = () => {
   const onSubmit = useCallback(
     async (data: ISignUp) => {
       try {
+        const res = await mutateAsync(data);
         const result = await mutateAsync(data);
         if (result.status === 201) {
           reset();
