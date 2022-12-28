@@ -29,7 +29,7 @@ export default function Header() {
           Products
         </Link>
       </div>
-      {status === "authenticated" && (
+      {status === "authenticated" ? (
         <div className="flex-none">
           <div className="dropdown-end dropdown">
             <label tabIndex={0} className="btn btn-ghost btn-circle">
@@ -46,7 +46,7 @@ export default function Header() {
             >
               <div className="card-body">
                 <span className="text-lg font-bold">{quantity} Items</span>
-                <span className="text-info">Subtotal: {currency(total)}</span>
+                <span className="text-info">Subtotal: {currency(total!)}</span>
                 <div className="card-actions">
                   <Link href="/checkout" passHref>
                     <button className="btn btn-secondary btn-block">
@@ -80,6 +80,10 @@ export default function Header() {
             </ul>
           </div>
         </div>
+      ) : (
+        <Link href="/sign-in">
+          <label className="btn btn-square mx-4 w-24">Sign In</label>
+        </Link>
       )}
     </div>
   );

@@ -10,11 +10,13 @@ interface State {
   loading: boolean;
   addItem?: (product: Product) => void;
   removeItem?: (product: Product) => void;
+  increaseQuantity?: (product: Product) => void;
+  descreaseQuantity?: (product: Product) => void;
   products?: BasketItem[];
   subtotal?: number;
   taxes?: number;
   shipping?: number;
-  total: number;
+  total: number | null;
   quantity?: number;
   discount?: { code: string; amount: number };
 }
@@ -35,7 +37,7 @@ export type BasketContextValue = State;
 
 const initialState: State = {
   loading: true,
-  total: 100,
+  total: null,
 };
 
 const BasketContext = createContext({
@@ -53,42 +55,51 @@ function BP({ children }: BasketProps) {
 
   React.useEffect(() => {
     const items = retrieve();
-    setState({ ...state, products: items });
-  }, []);
-
-  const addItem = useCallback((product: Product) => {
-    const items = retrieve();
-    let newItems;
-
-    if (items) {
-      const itemExists = items.findIndex(
-        (item: Product) => item.id === product.id
-      );
-      const itemInQuestion = items.find(
-        (item: Product) => item.id === product.id
-      );
-      const itemsList =
-        itemExists > -1
-          ? items.splice(itemExists, 1)
-          : [...items, { ...product, quantity: 1 }];
-      newItems =
-        itemExists > -1
-          ? [...itemsList, { ...product, quantity: itemInQuestion.quanity++ }]
-          : itemsList;
-    } else {
-      newItems = [{ ...product, quantity: 1 }];
-    }
-    persist(newItems);
-    setState({ ...state, products: newItems });
-    getQuantity();
     getBasketValues();
+    getQuantity();
+    setState((s) => ({ ...s, products: items }));
   }, []);
+
+  const addItem = useCallback(
+    (product: Product) => {
+      const items = retrieve();
+      let newItems: Product[];
+      if (items.length > 0) {
+        const itemExists = items.findIndex(
+          (item: Product) => item.id === product.id
+        );
+        const itemInQuestion: BasketItem = items.find(
+          (item: Product) => item.id === product.id
+        );
+
+        const itemsList: BasketItem[] =
+          itemExists > -1
+            ? items.filter((item: Product) => item.id !== product.id)
+            : [...items, { ...product, quantity: 1 }];
+
+        newItems =
+          itemExists > -1
+            ? [
+                ...itemsList,
+                { ...product, quantity: itemInQuestion.quantity + 1 },
+              ]
+            : itemsList;
+      } else {
+        newItems = [{ ...product, quantity: 1 }];
+      }
+      setState((s) => ({ ...s, products: newItems }));
+      persist(newItems);
+      getQuantity();
+      getBasketValues();
+    },
+    [state]
+  );
 
   const removeItem = useCallback((product: Product) => {
     const items = retrieve();
     const newItems = items.filter((item: Product) => item.id !== product.id);
     persist(newItems);
-    setState({ ...state, products: newItems });
+    setState((s) => ({ ...s, products: newItems }));
     getBasketValues();
     getQuantity();
   }, []);
@@ -96,9 +107,17 @@ function BP({ children }: BasketProps) {
   const getBasketValues = useCallback(() => {
     const basketItems: BasketItem[] = retrieve();
     let total: number = 0;
-    let res = {};
+    let shipping: number = 0;
+    let subtotal: number = 0;
+    let taxes: number = 0;
+    let res = {
+      total: 0,
+      shipping: 0,
+      subtotal: 0,
+      taxes: 0,
+    };
     if (basketItems && basketItems.length > 0) {
-      const subtotal =
+      subtotal =
         (basketItems &&
           basketItems.length > 0 &&
           basketItems
@@ -107,18 +126,21 @@ function BP({ children }: BasketProps) {
             })
             .reduce((a, b) => a + b, 0)) ||
         0;
-      const taxes = subtotal * 0.175;
-      const shipping = 50;
+      taxes = subtotal * 0.175;
+      shipping = 50;
 
-      total = taxes + shipping + subtotal;
-      res = {
-        subtotal,
-        taxes,
-        shipping,
-        total,
-      };
+      total = Math.round(taxes + shipping + subtotal);
     }
-    setState((s) => ({ ...s, quantity: total, ...res }));
+    res = {
+      subtotal,
+      taxes,
+      shipping,
+      total,
+    };
+    setState((s) => ({
+      ...s,
+      ...res,
+    }));
   }, []);
 
   const getQuantity = useCallback(() => {
@@ -130,9 +152,57 @@ function BP({ children }: BasketProps) {
     setState((s) => ({ ...s, quantity: total }));
   }, []);
 
-  React.useEffect(() => {
-    getBasketValues();
-    getQuantity();
+  const decreaseQuantity = useCallback((product: BasketItem) => {
+    const basketItems: BasketItem[] = retrieve();
+
+    const itemExists = basketItems?.findIndex(
+      (item: Product) => item.id === product.id
+    );
+    const itemInQuestion: BasketItem | undefined =
+      basketItems &&
+      basketItems?.find((item: Product) => item.id === product.id);
+
+    if (itemExists > -1) {
+      const newItems = basketItems?.filter(
+        (item: Product) => item.id !== product.id
+      );
+      const itemsList: BasketItem[] =
+        itemInQuestion && itemInQuestion.quantity === 1
+          ? [...newItems, { ...product, quantity: itemInQuestion.quantity - 1 }]
+          : newItems;
+      setState((s) => ({ ...s, products: itemsList }));
+      persist(newItems);
+      getQuantity();
+      getBasketValues();
+    } else {
+      return;
+    }
+  }, []);
+
+  const increaseQuantity = useCallback((product: BasketItem) => {
+    const basketItems: BasketItem[] = retrieve();
+    const itemExists = basketItems?.findIndex(
+      (item: Product) => item.id === product.id
+    );
+    const itemInQuestion: BasketItem | undefined =
+      basketItems &&
+      basketItems?.find((item: Product) => item.id === product.id);
+
+    if (itemExists > -1) {
+      const newItems = basketItems?.filter(
+        (item: Product) => item.id !== product.id
+      );
+      const itemsList: BasketItem[] = [
+        ...newItems,
+        { ...product, quantity: itemInQuestion!.quantity + 1 },
+      ];
+      setState((s) => ({ ...s, products: itemsList }));
+      persist(newItems);
+      getQuantity();
+      getBasketValues();
+    } else {
+      return;
+    }
   }, []);
 
   const value = {
@@ -140,6 +210,8 @@ function BP({ children }: BasketProps) {
     setState,
     addItem,
     removeItem,
+    increaseQuantity,
+    decreaseQuantity,
   };
 
   return (

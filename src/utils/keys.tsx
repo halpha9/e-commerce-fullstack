@@ -1,1 +1,1 @@
-export const BASKET_KEY = "basket.items";
+export const BASKET_KEY = "basket.list";

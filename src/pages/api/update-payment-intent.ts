@@ -9,17 +9,17 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { total, products } = req.body;
+  const { total, products, intentId, orderId } = req.body;
 
-  const paymentIntent = await stripe.paymentIntents.create({
-    payment_method_types: ["card"],
-    amount: total || 100,
-    metadata: { products },
+  const paymentIntent = await stripe.paymentIntents.update(intentId, {
+    amount: total,
     currency: "gbp",
+    metadata: { products, orderId },
   });
 
   res.send({
-    clientSecret: paymentIntent.client_secret,
-    id: paymentIntent.id,
+    total,
+    products,
+    intentId,
   });
 }

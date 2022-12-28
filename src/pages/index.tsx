@@ -44,6 +44,42 @@ const Home = ({ products }: Props) => {
   return (
     <div className="min-h-screen bg-base-100">
       <main>
+        <div className="relative">
+          <div
+            aria-hidden="true"
+            className="absolute hidden h-full w-1/2 bg-base-300 lg:block"
+          />
+          <div className="relative bg-base-300 lg:bg-transparent">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:grid lg:grid-cols-2 lg:px-8">
+              <div className="mx-auto max-w-2xl py-24 lg:max-w-none lg:py-64">
+                <div className="lg:pr-16">
+                  <h1 className="text-4xl font-bold tracking-tight text-gray-400 sm:text-5xl xl:text-6xl">
+                    Focus on what matters
+                  </h1>
+                  <p className="mt-4 text-xl text-gray-300">
+                    All the charts, datepickers, and notifications in the world
+                    can&apos;t beat checking off some items on a paper card.
+                  </p>
+                  <div className="mt-6">
+                    <Link
+                      href="/products"
+                      className="inline-block rounded-md border border-transparent bg-secondary py-3 px-8 font-semibold text-gray-800 hover:bg-secondary-focus"
+                    >
+                      Shop Products
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="h-48 w-full sm:h-64 lg:absolute lg:top-0 lg:right-0 lg:h-full lg:w-1/2">
+            <img
+              src="https://tailwindui.com/img/ecommerce-images/home-page-02-hero-half-width.jpg"
+              alt=""
+              className="h-full w-full object-cover object-center"
+            />
+          </div>
+        </div>
         <section aria-labelledby="trending-heading">
           <div className="mx-auto max-w-7xl py-24 px-4 sm:px-6 sm:py-24 lg:px-8 lg:pt-12">
             <div className="md:flex md:items-center md:justify-between">
@@ -69,16 +105,9 @@ const Home = ({ products }: Props) => {
                   <div key={product.id} className="group relative">
                     <div className="h-56 w-full overflow-hidden rounded-md group-hover:opacity-75 lg:h-72 xl:h-80">
                       {product.image && (
-                        <Image
+                        <img
                           src={product.image}
                           alt={product.image}
-                          sizes="100vw"
-                          style={{
-                            width: "100%",
-                            height: "auto",
-                          }}
-                          width={700}
-                          height={400}
                           className="h-full w-full rounded-md object-cover object-center"
                         />
                       )}
@@ -110,7 +139,7 @@ const Home = ({ products }: Props) => {
 
         <section
           aria-labelledby="perks-heading"
-          className="border-t border-base-300"
+          className="border-t border-base-300 bg-base-300"
         >
           <h2 id="perks-heading" className="sr-only">
             Our perks

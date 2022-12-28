@@ -31,9 +31,10 @@ model Order {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  address   String
-  paymentId String @unique
+  address   String?
+  paymentId String? @unique
   payment   Payment?
+  data      String
   status    String  @default("PENDING")
   userId    String?
   user      User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -44,6 +45,7 @@ model OrderProduct {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  quantity   Int
   productId String 
   orderId   String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -58,8 +60,8 @@ model Payment {
   currency String
   orderId  String @unique
   stripeId String @unique
-  userId    String
-  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
   order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 

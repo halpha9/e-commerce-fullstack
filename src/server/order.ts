@@ -1,19 +1,17 @@
-import { publicProcedure, router } from "./trpc";
+import { protectedProcedure, publicProcedure, router } from "./trpc";
 import { z } from "zod";
 
 export const orderRouter = router({
   addOrder: publicProcedure
     .input(
       z.object({
-        productIds: z.array(z.string()),
-        paymentId: z.string(),
-        address: z.string(),
+        products: z.array(z.object({ id: z.string(), quantity: z.number() })),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const { prisma, session } = ctx;
 
-      const { productIds, address, paymentId } = input;
+      const { products } = input;
 
       let userId;
 
@@ -23,20 +21,21 @@ export const orderRouter = router({
 
       if (userId) {
         const result = await prisma.order.create({
-          data: { address, paymentId, userId },
+          data: { userId, data: products[0]!.id },
         });
       }
 
       const result = await prisma.order.create({
-        data: { address, paymentId },
+        data: { data: products[0]!.id },
       });
 
       let res;
 
       if (result) {
-        const orderProduct = productIds.map((productId) => {
+        const orderProduct = products.map((product) => {
           return {
-            productId,
+            quantity: product.quantity,
+            productId: product.id,
             orderId: result.id,
           };
         });
@@ -52,6 +51,66 @@ export const orderRouter = router({
         message: "Order Added Successfully",
         result: result,
         orderProduct: res,
+      };
+    }),
+  addPayment: publicProcedure
+    .input(
+      z.object({
+        stripeId: z.string(),
+        amount: z.number(),
+        orderId: z.string(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { prisma, session } = ctx;
+      const { stripeId, amount, orderId } = input;
+      const currency = "gbp";
+
+      let userId;
+
+      if (session) {
+        userId = session.user.userId;
+      }
+
+      const result = await prisma.payment.create({
+        data: {
+          stripeId,
+          amount,
+          currency,
+          orderId,
+          userId,
+        },
+      });
+
+      return {
+        status: 201,
+        result: result,
+        message: "Payment Added Successfully",
+      };
+    }),
+  completeOrder: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        paymentId: z.string(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { prisma } = ctx;
+      const { id, paymentId } = input;
+
+      const result = await prisma.order.update({
+        where: { id },
+        data: {
+          status: "COMPLETE",
+          paymentId,
+        },
+      });
+
+      return {
+        status: 201,
+        result: result,
+        message: "Order Completed Successfully",
       };
     }),
 });

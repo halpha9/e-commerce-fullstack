@@ -3,13 +3,25 @@ import { useSession } from "next-auth/react";
 import { requireAuth } from "../common/requireAuth";
 import { trpc } from "../common/trpc";
 import { prisma } from "../common/prisma";
-import type { Order, Payment, Product, User } from "@prisma/client";
+import type {
+  Order as Ord,
+  OrderProduct,
+  Payment,
+  Product,
+  User,
+} from "@prisma/client";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { MagnifyingGlassIcon } from "@heroicons/react/20/solid";
 import { format, parseISO } from "date-fns";
 import { currency } from "../utils/formats";
+
+type Order = Ord & {
+  product: OrderProduct[];
+  payment: Payment | null;
+  user: User | null;
+};
 
 type Props = {
   products: Product[];
@@ -51,7 +63,7 @@ type State = {
   rightSection: RightSection;
   selectedCustomer?: User;
   selectedProduct?: Product;
-  selectedOrder?: Order[];
+  selectedOrder?: Order;
   selectedPayment?: Payment[];
 };
 
@@ -134,8 +146,8 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
           </div>
         </div>
       </div>
-      <div className="flex w-full items-center justify-between px-12 py-8">
-        <div className="flex h-12 w-fit items-center self-start rounded-lg border border-gray-700 bg-base-200">
+      <div className="flex w-full flex-col items-center justify-between space-y-4 px-12 py-8 lg:flex-row lg:space-y-0">
+        <div className="flex h-12 w-fit items-center rounded-lg border border-gray-700 bg-base-200 lg:self-start">
           <div className="tabs tabs-boxed">
             {tabs &&
               tabs.map((tab) => (
@@ -143,7 +155,11 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
                   key={tab}
                   onClick={() => setState((s) => ({ ...s, currentTab: tab }))}
                   className={`
-                    ${state.currentTab === tab && "tab-active bg-secondary "} 
+                    ${
+                      state.currentTab === tab
+                        ? "btn-secondary rounded-lg"
+                        : "text-white "
+                    } 
                     tab
                   `}
                 >
@@ -152,9 +168,9 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
               ))}
           </div>
         </div>
-        <div className="w-fit self-end rounded-lg border border-gray-700">
+        <div className="w-fit rounded-lg border border-gray-700 lg:self-end">
           <div className="form-control ">
-            <div className="input-group ">
+            <div className="input-group">
               <input
                 type="text"
                 placeholder="Search…"
@@ -171,185 +187,125 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
         {state.currentTab === Tabs.Orders && (
           <div>
             <div className="flex w-full self-end px-6">
-              {state.selectedCustomers &&
-                state.selectedCustomers.length > 0 && (
-                  <button
-                    onClick={() => {
-                      if (
-                        confirm(
-                          "Are you sure you want to remove these user(s) ?"
-                        ) == true
-                      ) {
-                        deleteUsers(state.selectedCustomers);
-                      }
-                    }}
-                    className="btn-outline btn btn-square"
-                  >
-                    <TrashIcon className="h-5 w-5" />
-                  </button>
-                )}
+              {state.selectedOrders && state.selectedOrders.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (
+                      confirm(
+                        "Are you sure you want to remove these Order(s) ?"
+                      ) == true
+                    ) {
+                      deleteUsers(state.selectedCustomers);
+                    }
+                  }}
+                  className="btn-outline btn btn-square"
+                >
+                  <TrashIcon className="h-5 w-5" />
+                </button>
+              )}
             </div>
             <div className="rounded-lg border border-gray-700">
               <table className="table w-full">
                 <thead>
                   <tr>
-                    <th>
+                    <th
+                      onClick={() => {
+                        if (
+                          state.selectedOrders &&
+                          state.selectedOrders.length === orders.length
+                        ) {
+                          setState({
+                            ...state,
+                            selectedOrders: [],
+                          });
+                        } else {
+                          setState({
+                            ...state,
+                            selectedOrders: ordersData.map((order) => order.id),
+                          });
+                        }
+                      }}
+                    >
                       <label>
-                        <input type="checkbox" className="checkbox" />
+                        <input type="checkbox" className="checkbox h-5 w-5" />
                       </label>
                     </th>
-                    <th>Name</th>
-                    <th>Job</th>
-                    <th>Favorite Color</th>
+                    <th className="overflow-hidden">Email</th>
+                    <th className="overflow-hidden truncate">
+                      Total & Quantity
+                    </th>
+                    <th>Date</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <th>
-                      <label>
-                        <input type="checkbox" className="checkbox" />
-                      </label>
-                    </th>
-                    <td>
-                      <div className="flex items-center space-x-3">
-                        <div className="avatar">
-                          <div className="mask mask-squircle h-12 w-12">
-                            <img
-                              src="/tailwind-css-component-profile-2@56w.png"
-                              alt="Avatar Tailwind CSS Component"
+                  {ordersData &&
+                    ordersData.map((order) => (
+                      <tr className="text-sm" key={order.id}>
+                        <th>
+                          <label>
+                            <input
+                              checked={
+                                state.selectedOrders &&
+                                state.selectedOrders.length > 0 &&
+                                state.selectedOrders.includes(order.id)
+                              }
+                              onClick={() => {
+                                setState({
+                                  ...state,
+                                  selectedOrders: state.selectedOrders
+                                    ? [...state.selectedOrders, order.id]
+                                    : [order.id],
+                                });
+                              }}
+                              type="checkbox"
+                              className="checkbox h-5 w-5"
                             />
+                          </label>
+                        </th>
+                        <td className="overflow-hidden">
+                          <div className="flex items-center space-x-3">
+                            <div>
+                              <div className="font-bold">
+                                {order.user?.email}
+                              </div>
+                              <div className="truncate text-xs opacity-50">
+                                {order.address}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        <div>
-                          <div className="font-bold">Hart Hagerty</div>
-                          <div className="text-sm opacity-50">
-                            United States
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      Zemlak, Daniel and Leannon
-                      <br />
-                      <span className="badge-ghost badge badge-sm">
-                        Desktop Support Technician
-                      </span>
-                    </td>
-                    <td>Purple</td>
-                    <th>
-                      <button className="btn btn-ghost btn-xs">details</button>
-                    </th>
-                  </tr>
-                  <tr>
-                    <th>
-                      <label>
-                        <input type="checkbox" className="checkbox" />
-                      </label>
-                    </th>
-                    <td>
-                      <div className="flex items-center space-x-3">
-                        <div className="avatar">
-                          <div className="mask mask-squircle h-12 w-12">
-                            <img
-                              src="/tailwind-css-component-profile-3@56w.png"
-                              alt="Avatar Tailwind CSS Component"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="font-bold">Brice Swyre</div>
-                          <div className="text-sm opacity-50">China</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      Carroll Group
-                      <br />
-                      <span className="badge-ghost badge badge-sm">
-                        Tax Accountant
-                      </span>
-                    </td>
-                    <td>Red</td>
-                    <th>
-                      <button className="btn btn-ghost btn-xs">details</button>
-                    </th>
-                  </tr>
-                  <tr>
-                    <th>
-                      <label>
-                        <input type="checkbox" className="checkbox" />
-                      </label>
-                    </th>
-                    <td>
-                      <div className="flex items-center space-x-3">
-                        <div className="avatar">
-                          <div className="mask mask-squircle h-12 w-12">
-                            <img
-                              src="/tailwind-css-component-profile-4@56w.png"
-                              alt="Avatar Tailwind CSS Component"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="font-bold">Marjy Ferencz</div>
-                          <div className="text-sm opacity-50">Russia</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      Rowe-Schoen
-                      <br />
-                      <span className="badge-ghost badge badge-sm">
-                        Office Assistant I
-                      </span>
-                    </td>
-                    <td>Crimson</td>
-                    <th>
-                      <button className="btn btn-ghost btn-xs">details</button>
-                    </th>
-                  </tr>
-                  <tr>
-                    <th>
-                      <label>
-                        <input type="checkbox" className="checkbox" />
-                      </label>
-                    </th>
-                    <td>
-                      <div className="flex items-center space-x-3">
-                        <div className="avatar">
-                          <div className="mask mask-squircle h-12 w-12">
-                            <img
-                              src="/tailwind-css-component-profile-5@56w.png"
-                              alt="Avatar Tailwind CSS Component"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <div className="font-bold">Yancy Tear</div>
-                          <div className="text-sm opacity-50">Brazil</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      Wyman-Ledner
-                      <br />
-                      <span className="badge-ghost badge badge-sm">
-                        Community Outreach Specialist
-                      </span>
-                    </td>
-                    <td>Indigo</td>
-                    <th>
-                      <button className="btn btn-ghost btn-xs">details</button>
-                    </th>
-                  </tr>
+                        </td>
+                        <td className="hidden h-full xl:table-cell">
+                          {format(parseISO(order.createdAt.toString()), "PPpp")}
+                        </td>
+                        <td className="h-full xl:hidden">
+                          {format(parseISO(order.createdAt.toString()), "PP")}
+                        </td>
+                        <td>
+                          <button
+                            onClick={() =>
+                              setState((s) => ({
+                                ...s,
+                                selectedOrder: order,
+                                rightSection: RightSection.Customer,
+                              }))
+                            }
+                            className="btn btn-ghost btn-xs opacity-60 hover:opacity-100"
+                          >
+                            User
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
                 <tfoot>
                   <tr>
                     <th></th>
-                    <th>Name</th>
-                    <th>Job</th>
-                    <th>Favorite Color</th>
+                    <th className="overflow-hidden">Email</th>
+                    <th className="overflow-hidden truncate">
+                      Total & Quantity
+                    </th>
+                    <th>Date</th>
                     <th></th>
                   </tr>
                 </tfoot>
@@ -636,7 +592,7 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
                             onClick={() =>
                               setState((s) => ({
                                 ...s,
-                                selectedOrder: customer.orders,
+                                selectedOrder: customer.orders[0],
                                 rightSection: RightSection.Orders,
                               }))
                             }

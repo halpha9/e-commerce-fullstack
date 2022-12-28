@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Disclosure } from "@headlessui/react";
 import { currency } from "../utils/formats";
 import { loadStripe } from "@stripe/stripe-js";
@@ -13,16 +13,34 @@ export default function Checkout() {
   const { total, shipping, taxes, subtotal, products, removeItem } =
     useBasket();
   const [clientSecret, setClientSecret] = React.useState("");
+  const [paymentId, setPaymentId] = React.useState("");
+
+  const productArr = useMemo(
+    () =>
+      products &&
+      products.map((product) => {
+        return {
+          id: product.id,
+          quantity: product.quantity,
+        };
+      }),
+    [products]
+  );
 
   React.useEffect(() => {
-    fetch("/api/create-payment-intent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ total }),
-    })
-      .then((res) => res.json())
-      .then((data) => setClientSecret(data.clientSecret));
-  }, []);
+    if (productArr && productArr) {
+      fetch("/api/create-payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ total, products: JSON.stringify(productArr) }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          setClientSecret(data.clientSecret);
+          setPaymentId(data.id);
+        });
+    }
+  }, [productArr]);
 
   const appearance: { theme: "night" } = {
     theme: "night",
@@ -89,6 +107,9 @@ export default function Checkout() {
                                   <h3 className="text-gray-300">
                                     {product.name}
                                   </h3>
+                                  <h3 className="text-gray-300">
+                                    Quantity: {product.quantity}
+                                  </h3>
                                   <p className="text-gray-400">
                                     {currency(product.price)}
                                   </p>
@@ -137,7 +158,9 @@ export default function Checkout() {
 
                     <p className="mt-6 flex items-center justify-between  pt-6 text-sm font-medium text-gray-400">
                       <span className="text-base">Total</span>
-                      <span className="text-base">{currency(total)}</span>
+                      {total && (
+                        <span className="text-base">{currency(total)}</span>
+                      )}
                     </p>
                   </>
                 ) : (
@@ -182,6 +205,9 @@ export default function Checkout() {
                       <div className="flex flex-col justify-between space-y-4">
                         <div className="space-y-1 text-sm font-medium">
                           <h3 className="text-gray-300">{product.name}</h3>
+                          <h3 className="text-gray-300">
+                            Quantity: {product.quantity}
+                          </h3>
                           <p className="text-gray-400">
                             {currency(product.price)}
                           </p>
@@ -246,9 +272,13 @@ export default function Checkout() {
           aria-labelledby="payment-heading"
           className="flex-auto overflow-y-auto px-4 pt-12 pb-16 sm:px-6 sm:pt-16 lg:px-8 lg:pt-0 lg:pb-24"
         >
-          {clientSecret && products && (
+          {clientSecret && products && total && (
             <Elements options={options} stripe={stripePromise}>
-              <CheckoutForm total={total} products={products!} />
+              <CheckoutForm
+                total={total}
+                products={products!}
+                intentId={paymentId}
+              />
             </Elements>
           )}
         </section>

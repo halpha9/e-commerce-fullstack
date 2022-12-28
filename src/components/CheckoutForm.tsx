@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   PaymentElement,
   LinkAuthenticationElement,
@@ -9,10 +9,12 @@ import type { StripePaymentElementOptions } from "@stripe/stripe-js";
 import { currency } from "../utils/formats";
 import type { Product } from "@prisma/client";
 import { trpc } from "../common/trpc";
+import { useBasket } from "../providers/basket";
 
 type Props = {
   total: number;
   products: Product[];
+  intentId: string;
 };
 
 type State = {
@@ -20,7 +22,8 @@ type State = {
   loading: boolean;
 };
 
-export default function CheckoutForm({ total, products }: Props) {
+export default function CheckoutForm({ total, products, intentId }: Props) {
+  const { setState: setBasketState } = useBasket();
   const { mutateAsync } = trpc.order.addOrder.useMutation();
 
   const stripe = useStripe();
@@ -43,7 +46,6 @@ export default function CheckoutForm({ total, products }: Props) {
     if (!clientSecret) {
       return;
     }
-
     stripe.retrievePaymentIntent(clientSecret).then(({ paymentIntent }) => {
       switch (paymentIntent!.status) {
         case "succeeded":
@@ -65,26 +67,56 @@ export default function CheckoutForm({ total, products }: Props) {
     });
   }, [stripe]);
 
+  const productArr = useMemo(
+    () =>
+      products &&
+      products.map((product) => {
+        return {
+          id: product.id,
+          quantity: product.quantity,
+        };
+      }),
+    [products]
+  );
+
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
+    try {
+      const orderResult = await mutateAsync({ products: productArr });
+      const res = await fetch("/api/update-payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          total,
+          products: JSON.stringify(productArr),
+          intentId,
+          orderId: orderResult.result.id,
+        }),
+      });
 
-    if (!stripe || !elements) {
-      return;
-    }
+      if (res) {
+        if (!stripe || !elements) {
+          return;
+        }
 
-    setState((s) => ({ ...s, loading: true }));
+        setState((s) => ({ ...s, loading: true }));
 
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: "http://localhost:3000",
-      },
-    });
+        const { error } = await stripe.confirmPayment({
+          elements,
+          confirmParams: {
+            return_url: "http://localhost:3000",
+          },
+        });
 
-    if (error.type === "card_error" || error.type === "validation_error") {
-      setState((s) => ({ ...s, message: error.message }));
-    } else {
-      setState((s) => ({ ...s, message: "An unexpected error occurred." }));
+        if (error.type === "card_error" || error.type === "validation_error") {
+          setState((s) => ({ ...s, message: error.message }));
+        } else {
+          setState((s) => ({ ...s, message: "An unexpected error occurred." }));
+        }
+      }
+      setBasketState((s) => ({ ...s, products: [] }));
+    } catch (err) {
+      console.log(err);
     }
 
     setState((s) => ({ ...s, loading: false }));
