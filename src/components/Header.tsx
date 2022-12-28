@@ -29,34 +29,32 @@ export default function Header() {
           Products
         </Link>
       </div>
-      {status === "authenticated" ? (
-        <div className="flex-none">
-          <div className="dropdown-end dropdown">
-            <label tabIndex={0} className="btn btn-ghost btn-circle">
-              <div className="indicator">
-                <ShoppingCartIcon className="h-5 w-5" />
-                <span className="badge badge-sm indicator-item">
-                  {quantity}
-                </span>
-              </div>
-            </label>
-            <div
-              tabIndex={0}
-              className="card-compact card dropdown-content mt-3 w-52 bg-base-100 shadow"
-            >
-              <div className="card-body">
-                <span className="text-lg font-bold">{quantity} Items</span>
-                <span className="text-info">Subtotal: {currency(total!)}</span>
-                <div className="card-actions">
-                  <Link href="/checkout" passHref>
-                    <button className="btn btn-secondary btn-block">
-                      View cart
-                    </button>
-                  </Link>
-                </div>
+      <div className="flex-none">
+        <div className="dropdown-end dropdown">
+          <label tabIndex={0} className="btn btn-ghost btn-circle">
+            <div className="indicator">
+              <ShoppingCartIcon className="h-5 w-5" />
+              <span className="badge badge-sm indicator-item">{quantity}</span>
+            </div>
+          </label>
+          <div
+            tabIndex={0}
+            className="card-compact card dropdown-content mt-3 w-52 bg-base-100 shadow"
+          >
+            <div className="card-body">
+              <span className="text-lg font-bold">{quantity} Items</span>
+              <span className="text-info">Subtotal: {currency(total!)}</span>
+              <div className="card-actions">
+                <Link href="/checkout" passHref>
+                  <button className="btn btn-secondary btn-block">
+                    View cart
+                  </button>
+                </Link>
               </div>
             </div>
           </div>
+        </div>
+        {status === "authenticated" && (
           <div className="dropdown-end dropdown">
             <label tabIndex={0} className="btn btn-ghost btn-circle avatar">
               <UserIcon className="h-6 w-6 " />
@@ -79,8 +77,9 @@ export default function Header() {
               </li>
             </ul>
           </div>
-        </div>
-      ) : (
+        )}
+      </div>
+      {status === "unauthenticated" && (
         <Link href="/sign-in">
           <label className="btn btn-square mx-4 w-24">Sign In</label>
         </Link>
