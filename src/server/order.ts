@@ -32,22 +32,20 @@ export const orderRouter = router({
         });
       }
 
-      let res;
+      const orderProduct = products.map((product) => {
+        return {
+          quantity: product.quantity,
+          productId: product.id,
+          orderId: result.id,
+        };
+      });
 
-      if (result) {
-        const orderProduct = products.map((product) => {
-          return {
-            quantity: product.quantity,
-            productId: product.id,
-            orderId: result.id,
-          };
+      const res = await orderProduct.map((orderProduct) => {
+        prisma.orderProduct.create({
+          data: orderProduct,
         });
-        res = await orderProduct.map((orderProduct) => {
-          prisma.orderProduct.create({
-            data: orderProduct,
-          });
-        });
-      }
+      });
+
       return {
         status: 201,
         message: "Order Added Successfully",

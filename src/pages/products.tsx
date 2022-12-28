@@ -1,18 +1,64 @@
-import type { GetServerSideProps } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 import { currency } from "../utils/formats";
-import { prisma } from "../common/prisma";
 import type { Product } from "@prisma/client";
 import { useBasket } from "../providers/basket";
+import { debounce } from "../utils/page";
+import { trpc } from "../common/trpc";
 
 type Props = {
-  products: Product[];
+  products?: Product[];
 };
 
-export default function Products({ products }: Props) {
+const useScrollPosition = () => {
+  const [scrollPosition, setScrollPosition] = React.useState(0);
+  const handleScroll = () => {
+    const height =
+      document.documentElement.scrollHeight -
+      document.documentElement.clientHeight;
+
+    const winScroll =
+      document.body.scrollTop || document.documentElement.scrollTop;
+
+    const scrolled = (winScroll / height) * 100;
+    setScrollPosition(scrolled);
+  };
+
+  React.useEffect(() => {
+    window.addEventListener("scroll", debounce(handleScroll, 500), {
+      passive: true,
+    });
+
+    return () => {
+      window.removeEventListener("scroll", debounce(handleScroll, 500));
+    };
+  }, []);
+
+  return scrollPosition;
+};
+
+export default function Products({}: Props) {
   const { addItem } = useBasket();
+
+  const { data, hasNextPage, fetchNextPage, isFetching } =
+    trpc.product.listProducts.useInfiniteQuery(
+      {
+        limit: 9,
+      },
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+      }
+    );
+
+  const products = data?.pages.flatMap((page) => page.products) ?? [];
+  const scrollPosition = useScrollPosition();
+
+  React.useEffect(() => {
+    if (scrollPosition > 90 && hasNextPage && !isFetching) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, isFetching, scrollPosition]);
 
   return (
     <div className="min-h-screen">
@@ -58,37 +104,28 @@ export default function Products({ products }: Props) {
                   <div className="mx-auto flex w-full justify-center self-end pt-4">
                     <button
                       onClick={() => addItem && addItem(product)}
-                      className="flex w-full items-center justify-center rounded-md border border-transparent bg-secondary py-3 px-8 text-base font-medium text-white transition-all hover:bg-secondary-focus focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-gray-50"
+                      className="flex w-full items-center justify-center rounded-md border border-transparent bg-secondary py-3 px-8 text-base font-medium text-gray-800 transition-all hover:bg-secondary-focus focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-gray-50"
                     >
                       Add To Cart
                     </button>
                   </div>
                 </div>
               ))}
+            {isFetching && (
+              <div className="w-full items-center justify-center">
+                <progress className="progress w-56"></progress>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-      <div className="flex w-full items-center justify-center pb-14">
-        <div className="btn-group">
-          <button className="btn">«</button>
-          <button className="btn">Page 1</button>
-          <button className="btn">»</button>
+          {!hasNextPage && (
+            <div className="flex w-full justify-center pt-10">
+              <p className="text-center text-lg font-bold">
+                No More Products To Load
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-export const getServerSideProps: GetServerSideProps = async () => {
-  const products = await prisma.product.findMany({
-    take: 12,
-    skip: 1, // Skip the cursor
-    orderBy: [{ createdAt: "desc" }],
-  });
-
-  return {
-    props: {
-      products: JSON.parse(JSON.stringify(products)),
-    },
-  };
-};

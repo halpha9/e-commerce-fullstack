@@ -10,8 +10,6 @@ interface State {
   loading: boolean;
   addItem?: (product: Product) => void;
   removeItem?: (product: Product) => void;
-  increaseQuantity?: (product: Product) => void;
-  descreaseQuantity?: (product: Product) => void;
   products?: BasketItem[];
   subtotal?: number;
   taxes?: number;
@@ -122,7 +120,7 @@ function BP({ children }: BasketProps) {
           basketItems.length > 0 &&
           basketItems
             .map((item: BasketItem) => {
-              return item.price;
+              return item.price * item.quantity;
             })
             .reduce((a, b) => a + b, 0)) ||
         0;
@@ -152,66 +150,11 @@ function BP({ children }: BasketProps) {
     setState((s) => ({ ...s, quantity: total }));
   }, []);
 
-  const decreaseQuantity = useCallback((product: BasketItem) => {
-    const basketItems: BasketItem[] = retrieve();
-
-    const itemExists = basketItems?.findIndex(
-      (item: Product) => item.id === product.id
-    );
-    const itemInQuestion: BasketItem | undefined =
-      basketItems &&
-      basketItems?.find((item: Product) => item.id === product.id);
-
-    if (itemExists > -1) {
-      const newItems = basketItems?.filter(
-        (item: Product) => item.id !== product.id
-      );
-      const itemsList: BasketItem[] =
-        itemInQuestion && itemInQuestion.quantity === 1
-          ? [...newItems, { ...product, quantity: itemInQuestion.quantity - 1 }]
-          : newItems;
-      setState((s) => ({ ...s, products: itemsList }));
-      persist(newItems);
-      getQuantity();
-      getBasketValues();
-    } else {
-      return;
-    }
-  }, []);
-
-  const increaseQuantity = useCallback((product: BasketItem) => {
-    const basketItems: BasketItem[] = retrieve();
-    const itemExists = basketItems?.findIndex(
-      (item: Product) => item.id === product.id
-    );
-    const itemInQuestion: BasketItem | undefined =
-      basketItems &&
-      basketItems?.find((item: Product) => item.id === product.id);
-
-    if (itemExists > -1) {
-      const newItems = basketItems?.filter(
-        (item: Product) => item.id !== product.id
-      );
-      const itemsList: BasketItem[] = [
-        ...newItems,
-        { ...product, quantity: itemInQuestion!.quantity + 1 },
-      ];
-      setState((s) => ({ ...s, products: itemsList }));
-      persist(newItems);
-      getQuantity();
-      getBasketValues();
-    } else {
-      return;
-    }
-  }, []);
-
   const value = {
     ...state,
     setState,
     addItem,
     removeItem,
-    increaseQuantity,
-    decreaseQuantity,
   };
 
   return (

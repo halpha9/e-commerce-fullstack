@@ -104,7 +104,11 @@ export default function CheckoutForm({ total, products, intentId }: Props) {
         const { error } = await stripe.confirmPayment({
           elements,
           confirmParams: {
-            return_url: "http://localhost:3000",
+            return_url: `${
+              process.env.NODE_ENV === "development"
+                ? process.env.NEXT_PUBLIC_DEV_URL!
+                : process.env.NEXT_PUBLIC_VERCEL_URL!
+            }/thanks/${orderResult.result.id}`,
           },
         });
 
@@ -145,7 +149,7 @@ export default function CheckoutForm({ total, products, intentId }: Props) {
       <div className="card my-8 w-[500] border border-base-100 bg-base-200 shadow-md">
         <div className="card-body w-full items-center">
           <div className="h-max w-max select-none">
-            <div className="recto z-2 relative flex h-56 w-96 flex-col justify-end gap-6 overflow-hidden rounded-2xl bg-secondary-focus px-8 py-6 text-white shadow-md">
+            <div className="recto z-2 relative flex h-56 w-96 flex-col justify-end gap-6 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-blue-800 to-blue-900 px-8 py-6 text-white shadow-md">
               <div className="logo absolute top-6 right-8 flex h-8 w-16 items-center justify-items-center">
                 <svg viewBox="0 0 1000 324.68">
                   <path

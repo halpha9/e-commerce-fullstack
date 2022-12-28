@@ -638,6 +638,7 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
 };
 
 export default Dashboard;
+
 export const getServerSideProps: GetServerSideProps = requireAuth(async () => {
   const products = await prisma.product.findMany({});
   const orders = await prisma.order.findMany({
