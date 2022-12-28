@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   // NOTE: When using postgresql, mysql or sqlserver, uncomment the @db.Text annotations in model Account below
   // Further reading:
   // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
@@ -34,7 +34,7 @@ model Order {
   address   String?
   paymentId String? @unique
   payment   Payment?
-  data      String
+  metadata   Json
   status    String  @default("PENDING")
   userId    String?
   user      User?  @relation(fields: [userId], references: [id], onDelete: Cascade)

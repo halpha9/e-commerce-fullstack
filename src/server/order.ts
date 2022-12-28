@@ -1,5 +1,6 @@
 import { protectedProcedure, publicProcedure, router } from "./trpc";
 import { z } from "zod";
+import { Order } from "@prisma/client";
 
 export const orderRouter = router({
   addOrder: publicProcedure
@@ -19,15 +20,17 @@ export const orderRouter = router({
         userId = session.user.userId;
       }
 
+      let result: Order;
+
       if (userId) {
-        const result = await prisma.order.create({
-          data: { userId, data: products[0]!.id },
+        result = await prisma.order.create({
+          data: { userId, metadata: JSON.stringify(products) },
+        });
+      } else {
+        result = await prisma.order.create({
+          data: { metadata: JSON.stringify(products) },
         });
       }
-
-      const result = await prisma.order.create({
-        data: { data: products[0]!.id },
-      });
 
       let res;
 
@@ -45,7 +48,6 @@ export const orderRouter = router({
           });
         });
       }
-
       return {
         status: 201,
         message: "Order Added Successfully",
