@@ -12,10 +12,10 @@ import type {
 } from "@prisma/client";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { TrashIcon } from "@heroicons/react/24/outline";
 import { MagnifyingGlassIcon } from "@heroicons/react/20/solid";
 import { format, parseISO } from "date-fns";
 import { currency } from "../utils/formats";
+import SearchBar from "../components/SearchBar";
 
 type Order = Ord & {
   product: OrderProduct[];
@@ -24,31 +24,40 @@ type Order = Ord & {
 };
 
 type Props = {
-  products: Product[];
-  orders: Order[];
+  payments: Payment[];
+  products: (Product & {
+    order: OrderProduct[];
+  })[];
+  orders: (Ord & {
+    product: (OrderProduct & {
+      product: Product;
+    })[];
+    payment: Payment | null;
+    user: User | null;
+  })[];
   customers: (User & {
     orders: Order[];
     payments: Payment[];
   })[];
-  staff: User[];
+  staff: (User & {
+    orders: Ord[];
+    payments: Payment[];
+  })[];
+  totalPayments: number;
+  totalOrders: number;
+  totalUsers: number;
 };
 
 enum Tabs {
   Orders = "Orders",
   Products = "Products",
   Customers = "Customers",
-}
-enum RightSection {
-  Order = "Order",
-  Product = "Product",
-  Customer = "Customer",
-  Payment = "Payment",
-  Empty = "Empty",
   Payments = "Payments",
-  Orders = "Orders",
+  Staff = "Staff",
 }
 
 type State = {
+  payments: Payment[];
   currentTab: Tabs;
   selectedCustomers: string[];
   selectedProducts: string[];
@@ -57,18 +66,38 @@ type State = {
     orders: Order[];
     payments: Payment[];
   })[];
-  products: Product[];
+  products: (Product & {
+    order: OrderProduct[];
+  })[];
   orders: Order[];
   searchValue: string;
-  rightSection: RightSection;
   selectedCustomer?: User;
   selectedProduct?: Product;
   selectedOrder?: Order;
   selectedPayment?: Payment[];
+  staff: (User & {
+    orders: Ord[];
+    payments: Payment[];
+  })[];
 };
 
-const tabs = [Tabs.Orders, Tabs.Products, Tabs.Customers];
-const Dashboard = ({ products, orders, staff, customers }: Props) => {
+const tabs = [
+  Tabs.Orders,
+  Tabs.Products,
+  Tabs.Customers,
+  Tabs.Payments,
+  Tabs.Staff,
+];
+const Dashboard = ({
+  products,
+  orders,
+  staff,
+  customers,
+  payments,
+  totalOrders,
+  totalPayments,
+  totalUsers,
+}: Props) => {
   const { mutateAsync: deleteUsers } = trpc.user.deleteUsers.useMutation();
   const { data: SessionData } = useSession();
   const router = useRouter();
@@ -76,14 +105,13 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
   useEffect(() => {
     if (SessionData) {
       if (SessionData.user.role !== "OWNER") {
-        router.push("/products");
+        router.push("/");
       }
     }
   }, [SessionData]);
 
   const [state, setState] = useState<State>({
     currentTab: Tabs.Orders,
-    rightSection: RightSection.Empty,
     selectedCustomers: [],
     selectedProducts: [],
     selectedOrders: [],
@@ -91,32 +119,80 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
     orders: [],
     products: [],
     searchValue: "",
+    staff: [],
+    payments: [],
   });
 
   const customerData =
-    state.customers && state.customers.length > 0 && state.customers
+    state.customers && state.customers.length > 0
       ? state.customers
+      : state.searchValue.length > 0 &&
+        state.customers &&
+        state.customers.length === 0
+      ? []
       : customers;
 
+  const staffData =
+    state.staff && state.staff.length > 0
+      ? state.staff
+      : state.searchValue.length > 0 && state.staff && state.staff.length === 0
+      ? []
+      : staff;
+
   const productData =
-    state.products && state.products.length > 0 && state.products
+    state.products && state.products.length > 0
       ? state.products
+      : state.searchValue.length > 0 &&
+        state.products &&
+        state.products.length === 0
+      ? []
       : products;
 
   const ordersData =
-    state.orders && state.orders.length > 0 && state.orders
+    state.orders && state.orders.length > 0
       ? state.orders
+      : state.searchValue.length > 0 &&
+        state.orders &&
+        state.orders.length === 0
+      ? []
       : orders;
 
-  const totalPayments = 91200;
-  const newUsers = 4200;
-  const ordersCount = 31000;
-  const newUsersPercentage = 22;
-  const newUsersDifference = 400;
-  const totalPaymentsDifference = 900;
-  const totalPaymentsPercentage = Math.round(
-    (totalPaymentsDifference / totalPayments) * 100
-  );
+  const paymentsData =
+    state.payments && state.payments.length > 0
+      ? state.payments
+      : state.searchValue.length > 0 &&
+        state.payments &&
+        state.payments.length === 0
+      ? []
+      : payments;
+
+  const setResult = (data: any) => {
+    console.log(data);
+    if (state.currentTab === Tabs.Orders) {
+      setState((s) => ({ ...s, orders: data }));
+    } else if (state.currentTab === Tabs.Products) {
+      setState((s) => ({ ...s, products: data }));
+    } else if (state.currentTab === Tabs.Customers) {
+      setState((s) => ({ ...s, customers: data }));
+    } else if (state.currentTab === Tabs.Payments) {
+      setState((s) => ({ ...s, payments: data }));
+    } else if (state.currentTab === Tabs.Staff) {
+      setState((s) => ({ ...s, staff: data }));
+    }
+  };
+
+  const originalData =
+    state.currentTab === Tabs.Orders
+      ? orders
+      : state.currentTab === Tabs.Products
+      ? products
+      : state.currentTab === Tabs.Customers
+      ? customers
+      : state.currentTab === Tabs.Payments
+      ? payments
+      : state.currentTab === Tabs.Staff
+      ? staff
+      : [];
 
   return (
     <div className="min-h-screen w-screen flex-1 justify-center">
@@ -124,25 +200,17 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
         <div className="stats stats-vertical border border-gray-700 shadow lg:stats-horizontal">
           <div className="stat">
             <div className="stat-title">Orders</div>
-            <div className="stat-value">{ordersCount / 1000}K</div>
-            <div className="stat-desc">Jan 1st - Feb 1st</div>
+            <div className="stat-value">{totalOrders}</div>
           </div>
 
           <div className="stat">
             <div className="stat-title">New Users</div>
-            <div className="stat-value">{newUsers}</div>
-            <div className="stat-desc">
-              ↗︎ {newUsersDifference} ({newUsersPercentage}%)
-            </div>
+            <div className="stat-value">{totalUsers}</div>
           </div>
 
           <div className="stat">
             <div className="stat-title">Total Payments</div>
             <div className="stat-value">{currency(totalPayments)}</div>
-            <div className="stat-desc">
-              ↘︎ {currency(totalPaymentsDifference)} ({totalPaymentsPercentage}
-              %)
-            </div>
           </div>
         </div>
       </div>
@@ -169,105 +237,65 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
           </div>
         </div>
         <div className="w-fit rounded-lg border border-gray-700 lg:self-end">
-          <div className="form-control ">
-            <div className="input-group">
-              <input
-                type="text"
-                placeholder="Search…"
-                className="input-bordered input h-12"
-              />
-              <button className="btn btn-square">
-                <MagnifyingGlassIcon className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
+          <SearchBar
+            originalData={originalData}
+            setSearchValue={(e) => {
+              setState((s) => ({ ...s, searchValue: e }));
+            }}
+            setResult={(e) => {
+              setResult(e);
+            }}
+            searchValue={state.searchValue}
+            searchKeysArray={[
+              "id",
+              "email",
+              "user.email",
+              "description",
+              "price",
+              "quantity",
+              "amount",
+              "status",
+              "currency",
+              "category",
+              "stripeId",
+              "orderId",
+              "total",
+              "quantity",
+              "date",
+              "name",
+            ]}
+          />
         </div>
       </div>
       <div className=" h-full w-full overflow-x-auto p-12">
         {state.currentTab === Tabs.Orders && (
           <div>
-            <div className="flex w-full self-end px-6">
-              {state.selectedOrders && state.selectedOrders.length > 0 && (
-                <button
-                  onClick={() => {
-                    if (
-                      confirm(
-                        "Are you sure you want to remove these Order(s) ?"
-                      ) == true
-                    ) {
-                      deleteUsers(state.selectedCustomers);
-                    }
-                  }}
-                  className="btn-outline btn btn-square"
-                >
-                  <TrashIcon className="h-5 w-5" />
-                </button>
-              )}
-            </div>
+            <div className="flex w-full self-end px-6"></div>
             <div className="rounded-lg border border-gray-700">
-              <table className="table w-full">
+              <table className="table w-full overflow-hidden">
                 <thead>
                   <tr>
-                    <th
-                      onClick={() => {
-                        if (
-                          state.selectedOrders &&
-                          state.selectedOrders.length === orders.length
-                        ) {
-                          setState({
-                            ...state,
-                            selectedOrders: [],
-                          });
-                        } else {
-                          setState({
-                            ...state,
-                            selectedOrders: ordersData.map((order) => order.id),
-                          });
-                        }
-                      }}
-                    >
-                      <label>
-                        <input type="checkbox" className="checkbox h-5 w-5" />
-                      </label>
-                    </th>
+                    <th></th>
+                    <th>Order ID:</th>
                     <th className="overflow-hidden">Email</th>
                     <th className="overflow-hidden truncate">
                       Total & Quantity
                     </th>
+                    <th>Status</th>
                     <th>Date</th>
-                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ordersData &&
+                  {ordersData && ordersData.length > 0 ? (
                     ordersData.map((order) => (
                       <tr className="text-sm" key={order.id}>
-                        <th>
-                          <label>
-                            <input
-                              checked={
-                                state.selectedOrders &&
-                                state.selectedOrders.length > 0 &&
-                                state.selectedOrders.includes(order.id)
-                              }
-                              onClick={() => {
-                                setState({
-                                  ...state,
-                                  selectedOrders: state.selectedOrders
-                                    ? [...state.selectedOrders, order.id]
-                                    : [order.id],
-                                });
-                              }}
-                              type="checkbox"
-                              className="checkbox h-5 w-5"
-                            />
-                          </label>
-                        </th>
+                        <th></th>
+                        <td>{order.id}</td>
                         <td className="overflow-hidden">
                           <div className="flex items-center space-x-3">
                             <div>
                               <div className="font-bold">
-                                {order.user?.email}
+                                {order.user?.email || "Guest Checkout"}
                               </div>
                               <div className="truncate text-xs opacity-50">
                                 {order.address}
@@ -275,38 +303,63 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
                             </div>
                           </div>
                         </td>
+                        <td>
+                          Total: {currency(order?.payment?.amount || 0)}
+                          <br />
+                          <span className="badge-ghost badge badge-sm -ml-2">
+                            Quantity:{" "}
+                            {order.product
+                              .map((p) => p.quantity)
+                              .reduce((a, b) => a + b, 0)}
+                          </span>
+                        </td>
+                        <td>
+                          <Badge text={order.status} />
+                        </td>
                         <td className="hidden h-full xl:table-cell">
                           {format(parseISO(order.createdAt.toString()), "PPpp")}
                         </td>
                         <td className="h-full xl:hidden">
                           {format(parseISO(order.createdAt.toString()), "PP")}
                         </td>
-                        <td>
-                          <button
-                            onClick={() =>
-                              setState((s) => ({
-                                ...s,
-                                selectedOrder: order,
-                                rightSection: RightSection.Customer,
-                              }))
-                            }
-                            className="btn btn-ghost btn-xs opacity-60 hover:opacity-100"
-                          >
-                            User
-                          </button>
-                        </td>
                       </tr>
-                    ))}
+                    ))
+                  ) : orders.length > 0 ? (
+                    <div className="mx-auto my-20 flex w-screen justify-center">
+                      <div className="text-center">
+                        <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-400">
+                          No Search Results Found
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-300">
+                          Please Edit Your Search Query and Try Again.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mx-auto my-20 flex w-screen justify-center">
+                      <div className="text-center">
+                        <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-400">
+                          No {Tabs.Orders}
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-300">
+                          Please Add Some {Tabs.Orders} to See Them Here.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </tbody>
                 <tfoot>
                   <tr>
                     <th></th>
+                    <th>Order ID:</th>
                     <th className="overflow-hidden">Email</th>
                     <th className="overflow-hidden truncate">
                       Total & Quantity
                     </th>
+                    <th>Status</th>
                     <th>Date</th>
-                    <th></th>
                   </tr>
                 </tfoot>
               </table>
@@ -315,157 +368,76 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
         )}
         {state.currentTab === Tabs.Products && (
           <div className="rounded-lg border border-gray-700">
-            <table className="table w-full">
+            <table className="table w-full overflow-hidden">
               <thead>
                 <tr>
-                  <th>
-                    <label>
-                      <input type="checkbox" className="checkbox" />
-                    </label>
-                  </th>
-                  <th>Name</th>
-                  <th>Job</th>
-                  <th>Favorite Color</th>
                   <th></th>
+                  <th>Product ID:</th>
+                  <th>Name</th>
+                  <th>Price & Quantity</th>
+                  <th>Category</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <th>
-                    <label>
-                      <input type="checkbox" className="checkbox" />
-                    </label>
-                  </th>
-                  <td>
-                    <div className="flex items-center space-x-3">
-                      <div className="avatar">
-                        <div className="mask mask-squircle h-12 w-12">
-                          <img
-                            src="/tailwind-css-component-profile-2@56w.png"
-                            alt="Avatar Tailwind CSS Component"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-bold">Hart Hagerty</div>
-                        <div className="text-sm opacity-50">United States</div>
-                      </div>
+                {productData && productData.length > 0 ? (
+                  productData.map((product) => {
+                    return (
+                      <tr className="text-sm" key={product.id}>
+                        <th></th>
+                        <td>{product.id}</td>
+                        <td>
+                          <div className="flex items-center space-x-3">
+                            <div className="avatar">
+                              <div className="mask mask-squircle h-12 w-12">
+                                {product.image && (
+                                  <img
+                                    src={product.image}
+                                    alt="Avatar Tailwind CSS Component"
+                                  />
+                                )}
+                              </div>
+                            </div>
+                            <div className="cursor font-bold transition-all hover:opacity-50">
+                              {product.name}
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          Price: {currency(product.price)}
+                          <br />
+                          <span className="badge-ghost badge badge-sm -ml-2">
+                            Quantity: {product.quantity}
+                          </span>
+                        </td>
+                        <td>{product.category}</td>
+                      </tr>
+                    );
+                  })
+                ) : products.length > 0 ? (
+                  <div className="mx-auto my-20 flex w-screen justify-center">
+                    <div className="text-center">
+                      <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-400">
+                        No Search Results Found
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-300">
+                        Please Edit Your Search Query and Try Again.
+                      </p>
                     </div>
-                  </td>
-                  <td>
-                    Zemlak, Daniel and Leannon
-                    <br />
-                    <span className="badge-ghost badge badge-sm">
-                      Desktop Support Technician
-                    </span>
-                  </td>
-                  <td>Purple</td>
-                  <th>
-                    <button className="btn btn-ghost btn-xs">details</button>
-                  </th>
-                </tr>
-                <tr>
-                  <th>
-                    <label>
-                      <input type="checkbox" className="checkbox" />
-                    </label>
-                  </th>
-                  <td>
-                    <div className="flex items-center space-x-3">
-                      <div className="avatar">
-                        <div className="mask mask-squircle h-12 w-12">
-                          <img
-                            src="/tailwind-css-component-profile-3@56w.png"
-                            alt="Avatar Tailwind CSS Component"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-bold">Brice Swyre</div>
-                        <div className="text-sm opacity-50">China</div>
-                      </div>
+                  </div>
+                ) : (
+                  <div className="mx-auto my-20 flex w-screen justify-center">
+                    <div className="text-center">
+                      <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-400">
+                        No {Tabs.Products}
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-300">
+                        Please Add Some {Tabs.Products} to See Them Here.
+                      </p>
                     </div>
-                  </td>
-                  <td>
-                    Carroll Group
-                    <br />
-                    <span className="badge-ghost badge badge-sm">
-                      Tax Accountant
-                    </span>
-                  </td>
-                  <td>Red</td>
-                  <th>
-                    <button className="btn btn-ghost btn-xs">details</button>
-                  </th>
-                </tr>
-                <tr>
-                  <th>
-                    <label>
-                      <input type="checkbox" className="checkbox" />
-                    </label>
-                  </th>
-                  <td>
-                    <div className="flex items-center space-x-3">
-                      <div className="avatar">
-                        <div className="mask mask-squircle h-12 w-12">
-                          <img
-                            src="/tailwind-css-component-profile-4@56w.png"
-                            alt="Avatar Tailwind CSS Component"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-bold">Marjy Ferencz</div>
-                        <div className="text-sm opacity-50">Russia</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    Rowe-Schoen
-                    <br />
-                    <span className="badge-ghost badge badge-sm">
-                      Office Assistant I
-                    </span>
-                  </td>
-                  <td>Crimson</td>
-                  <th>
-                    <button className="btn btn-ghost btn-xs">details</button>
-                  </th>
-                </tr>
-                <tr>
-                  <th>
-                    <label>
-                      <input type="checkbox" className="checkbox" />
-                    </label>
-                  </th>
-                  <td>
-                    <div className="flex items-center space-x-3">
-                      <div className="avatar">
-                        <div className="mask mask-squircle h-12 w-12">
-                          <img
-                            src="/tailwind-css-component-profile-5@56w.png"
-                            alt="Avatar Tailwind CSS Component"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-bold">Yancy Tear</div>
-                        <div className="text-sm opacity-50">Brazil</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    Wyman-Ledner
-                    <br />
-                    <span className="badge-ghost badge badge-sm">
-                      Community Outreach Specialist
-                    </span>
-                  </td>
-                  <td>Indigo</td>
-                  <th>
-                    <button className="btn btn-ghost btn-xs">details</button>
-                  </th>
-                </tr>
+                  </div>
+                )}
               </tbody>
               <tfoot>
                 <tr>
@@ -479,98 +451,108 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
             </table>
           </div>
         )}
+        {state.currentTab === Tabs.Staff && (
+          <div>
+            <div className="flex w-full self-end px-6"></div>
+            <div className="rounded-lg border border-gray-700">
+              <table className="table w-full overflow-hidden">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Staff ID:</th>
+                    <th>Email</th>
+                    <th>Member Since</th>
+                    <th>Orders</th>
+                    <th>Payments</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffData && staffData.length > 0 ? (
+                    staffData.map((customer) => (
+                      <tr className="text-sm" key={customer.id}>
+                        <th></th>
+                        <td>{customer.id}</td>
+                        <td className="items-center justify-center overflow-hidden">
+                          {customer.email}
+                        </td>
+                        <td className="hidden h-full xl:table-cell">
+                          {format(
+                            parseISO(customer.createdAt.toString()),
+                            "PPpp"
+                          )}
+                        </td>
+                        <td className="h-full xl:hidden">
+                          {format(
+                            parseISO(customer.createdAt.toString()),
+                            "PP"
+                          )}
+                        </td>
+                        <td>{customer.orders.length || 0}</td>
+                        <td>{customer.payments.length || 0}</td>
+                      </tr>
+                    ))
+                  ) : staff.length > 0 ? (
+                    <div className="mx-auto my-20 flex w-screen justify-center">
+                      <div className="text-center">
+                        <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-400">
+                          No Search Results Found
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-300">
+                          Please Edit Your Search Query and Try Again.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mx-auto my-20 flex w-screen justify-center">
+                      <div className="text-center">
+                        <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-400">
+                          No {Tabs.Staff}
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-300">
+                          Please Add Some {Tabs.Staff} to See Them Here.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th></th>
+                    <th>Staff ID:</th>
+                    <th>Email</th>
+                    <th>Member Since</th>
+                    <th>Orders</th>
+                    <th>Payments</th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
         {state.currentTab === Tabs.Customers && (
           <div>
             <div className="flex w-full self-end px-6"></div>
             <div className="rounded-lg border border-gray-700">
-              <table className="table w-full">
+              <table className="table w-full overflow-hidden">
                 <thead>
                   <tr>
-                    <th
-                      onClick={() => {
-                        if (
-                          state.selectedCustomers &&
-                          state.selectedCustomers.length === customers.length
-                        ) {
-                          setState({
-                            ...state,
-                            selectedCustomers: [],
-                          });
-                        } else {
-                          setState({
-                            ...state,
-                            selectedCustomers: customerData.map(
-                              (customer) => customer.id
-                            ),
-                          });
-                        }
-                      }}
-                    >
-                      <div className="flex items-center">
-                        <label>
-                          <input type="checkbox" className="checkbox h-5 w-5" />
-                        </label>
-                        {state.selectedCustomers &&
-                          state.selectedCustomers.length > 0 && (
-                            <button
-                              onClick={() => {
-                                if (
-                                  confirm(
-                                    "Are you sure you want to remove these user(s) ?"
-                                  ) == true
-                                ) {
-                                  deleteUsers(state.selectedCustomers);
-                                }
-                              }}
-                              className="p-1"
-                            >
-                              <TrashIcon className="h-4 w-4" />
-                            </button>
-                          )}
-                      </div>
-                    </th>
+                    <th></th>
+                    <th>Customer ID:</th>
                     <th>Email</th>
                     <th>Customer Since</th>
                     <th>Orders</th>
                     <th>Payments</th>
-                    <th></th>
                   </tr>
                 </thead>
-                <tbody>
-                  {customerData &&
+                <tbody className="">
+                  {customerData && customerData.length > 0 ? (
                     customerData.map((customer) => (
                       <tr className="text-sm" key={customer.id}>
-                        <th>
-                          <label>
-                            <input
-                              checked={
-                                state.selectedCustomers &&
-                                state.selectedCustomers.length > 0 &&
-                                state.selectedCustomers.includes(customer.id)
-                              }
-                              onClick={() => {
-                                setState({
-                                  ...state,
-                                  selectedCustomers: state.selectedCustomers
-                                    ? [...state.selectedCustomers, customer.id]
-                                    : [customer.id],
-                                });
-                              }}
-                              type="checkbox"
-                              className="checkbox h-5 w-5"
-                            />
-                          </label>
-                        </th>
-                        <td
-                          onClick={() =>
-                            setState((s) => ({
-                              ...s,
-                              selectedCustomer: customer,
-                              rightSection: RightSection.Customer,
-                            }))
-                          }
-                          className="items-center justify-center overflow-hidden"
-                        >
+                        <th></th>
+                        <td>{customer.id}</td>
+                        <td className="items-center justify-center overflow-hidden">
                           <p className="cursor-pointer transition-all hover:opacity-50">
                             {customer.email}
                           </p>
@@ -589,44 +571,130 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
                           )}
                         </td>
                         <td>
-                          <button
-                            onClick={() =>
-                              setState((s) => ({
-                                ...s,
-                                selectedOrder: customer.orders[0],
-                                rightSection: RightSection.Orders,
-                              }))
-                            }
-                            className="btn btn-ghost btn-xs opacity-60 hover:opacity-100"
-                          >
-                            Orders
-                          </button>
+                          <div className="btn btn-ghost btn-xs opacity-60 hover:opacity-100">
+                            {customer.orders.length || 0}
+                          </div>
                         </td>
                         <td>
-                          <button
-                            onClick={() =>
-                              setState((s) => ({
-                                ...s,
-                                selectedPayment: customer.payments,
-                                rightSection: RightSection.Payments,
-                              }))
-                            }
-                            className="btn btn-ghost btn-xs opacity-60 hover:opacity-100"
-                          >
-                            Payments
-                          </button>
+                          <div className="btn btn-ghost btn-xs opacity-60 hover:opacity-100">
+                            {customer.payments.length || 0}
+                          </div>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                  ) : customers.length > 0 ? (
+                    <div className="mx-auto my-20 flex w-screen justify-center">
+                      <div className="text-center">
+                        <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-400">
+                          No Search Results Found
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-300">
+                          Please Edit Your Search Query and Try Again.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mx-auto my-20 flex w-screen justify-center">
+                      <div className="text-center">
+                        <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-400">
+                          No {Tabs.Customers}
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-300">
+                          Please Add Some {Tabs.Customers} to See Them Here.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </tbody>
                 <tfoot>
                   <tr>
                     <th></th>
+                    <th>Customer ID:</th>
                     <th>Email</th>
                     <th>Customer Since</th>
                     <th>Orders</th>
                     <th>Payments</th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+        {state.currentTab === Tabs.Payments && (
+          <div>
+            <div className="flex w-full self-end px-6"></div>
+            <div className="rounded-lg border border-gray-700">
+              <table className="table w-full overflow-hidden">
+                <thead>
+                  <tr>
                     <th></th>
+                    <th>Payment ID:</th>
+                    <th>StripeID</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Currency</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paymentsData && paymentsData.length > 0 ? (
+                    paymentsData.map((payment) => (
+                      <tr className="text-sm" key={payment.id}>
+                        <th></th>
+                        <td>
+                          <div>{payment.id}</div>
+                        </td>
+                        <td className="items-center justify-center overflow-hidden">
+                          {payment.stripeId || "N/A"}
+                        </td>
+                        <td className="hidden h-full xl:table-cell">
+                          {format(
+                            parseISO(payment.createdAt.toString()),
+                            "PPpp"
+                          )}
+                        </td>
+                        <td className="h-full xl:hidden">
+                          {format(parseISO(payment.createdAt.toString()), "PP")}
+                        </td>
+                        <td>{currency(payment.amount)}</td>
+                        <td className="uppercase">{payment.currency}</td>
+                      </tr>
+                    ))
+                  ) : payments.length > 0 ? (
+                    <div className="mx-auto my-20 flex w-screen justify-center">
+                      <div className="text-center">
+                        <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-400">
+                          No Search Results Found
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-300">
+                          Please Edit Your Search Query and Try Again.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mx-auto my-20 flex w-screen justify-center">
+                      <div className="text-center">
+                        <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-400">
+                          No {Tabs.Payments}
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-300">
+                          Please Add Some {Tabs.Payments} to See Them Here.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th></th>
+                    <th>Payment ID:</th>
+                    <th>StripeID</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Currency</th>
                   </tr>
                 </tfoot>
               </table>
@@ -641,11 +709,19 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
 export default Dashboard;
 
 export const getServerSideProps: GetServerSideProps = requireAuth(async () => {
-  const products = await prisma.product.findMany({});
+  const products = await prisma.product.findMany({
+    include: {
+      order: true,
+    },
+  });
   const orders = await prisma.order.findMany({
     include: {
       user: true,
-      product: true,
+      product: {
+        include: {
+          product: true,
+        },
+      },
       payment: true,
     },
   });
@@ -656,14 +732,38 @@ export const getServerSideProps: GetServerSideProps = requireAuth(async () => {
       payments: true,
     },
   });
-  const staff = await prisma.user.findMany({ where: { role: "OWNER" } });
+  const staff = await prisma.user.findMany({
+    where: { role: "OWNER" },
+    include: {
+      orders: true,
+      payments: true,
+    },
+  });
+  const payments = await prisma.payment.findMany({});
 
+  const totalPayments = await prisma.payment.aggregate({
+    _sum: {
+      amount: true,
+    },
+  });
+
+  const totalOrders = await prisma.order.count();
+  const totalUsers = await prisma.user.count();
   return {
     props: {
       products: JSON.parse(JSON.stringify(products)),
       orders: JSON.parse(JSON.stringify(orders)),
       customers: JSON.parse(JSON.stringify(customers)),
       staff: JSON.parse(JSON.stringify(staff)),
+      payments: JSON.parse(JSON.stringify(payments)),
+      totalPayments: totalPayments._sum.amount,
+      totalOrders: totalOrders,
+      totalUsers: totalUsers,
     },
   };
 });
+
+const Badge = ({ text }: { text: string }) => {
+  const className = text === "COMPLETE" ? "badge-secondary" : "badge-accent";
+  return <div className={`${className} badge-outline badge`}>{text}</div>;
+};

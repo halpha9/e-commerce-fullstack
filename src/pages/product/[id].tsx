@@ -11,6 +11,7 @@ import { Fragment } from "react";
 import { Tab } from "@headlessui/react";
 import Image from "next/image";
 import { currency } from "../../utils/formats";
+import { useBasket } from "../../providers/basket";
 
 const reviews = {
   average: 4,
@@ -90,6 +91,7 @@ type Props = {
 };
 
 export default function Product({ product }: Props) {
+  const { addItem } = useBasket();
   return (
     <div className="min-h-screen">
       <div className="bg-base-100">
@@ -163,16 +165,12 @@ export default function Product({ product }: Props) {
 
               <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
                 <button
+                  onClick={() => addItem && addItem(product)}
                   type="button"
                   className="flex w-full items-center justify-center rounded-md border border-transparent bg-secondary py-3 px-8 text-base font-medium text-white transition-all hover:bg-secondary-focus focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-gray-50"
                 >
-                  Pay {currency(product.price)}
-                </button>
-                <button
-                  type="button"
-                  className="hover:text-content flex w-full items-center justify-center rounded-md border border-transparent bg-white py-3 px-8 text-base font-medium text-secondary-content transition-all hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-gray-50"
-                >
-                  Preview
+                  Add To Cart{" "}
+                  <span className="ml-4">{currency(product.price)}</span>
                 </button>
               </div>
 

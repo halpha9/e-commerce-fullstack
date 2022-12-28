@@ -1,3 +1,4 @@
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import * as F from "fuse.js";
 import * as _ from "lodash";
 import React, { useEffect, useRef, useState } from "react";
@@ -6,7 +7,9 @@ type Props = {
   placeholder?: string;
   originalData: any[];
   setResult: (result: any[] | null) => void;
+  searchValue: string;
   searchKeysArray?: string[];
+  setSearchValue: (value: string) => void;
 };
 
 export default function SearchBar({
@@ -14,11 +17,9 @@ export default function SearchBar({
   originalData,
   setResult,
   searchKeysArray = ["title"],
+  searchValue,
+  setSearchValue,
 }: Props) {
-  const [state, setState] = useState({
-    search: "",
-  });
-
   const fuse = useRef(
     new F.default(originalData, {
       includeMatches: true,
@@ -38,8 +39,8 @@ export default function SearchBar({
   }, [originalData]);
 
   useEffect(() => {
-    if (state.search && state.search.length > 1) {
-      let result = fuse.current.search(state.search);
+    if (searchValue && searchValue.length > 1) {
+      let result = fuse.current.search(searchValue);
       result = result.map((item) => {
         return item.item;
       });
@@ -47,22 +48,22 @@ export default function SearchBar({
     } else {
       setResult(null);
     }
-  }, [state.search, originalData]);
+  }, [searchValue, originalData]);
 
   return (
     <div className="form-control">
-      <div className="input-group">
-        <input
-          onChange={(e) =>
-            setState((s) => ({
-              ...s,
-              search: e.target.value,
-            }))
-          }
-          type="text"
-          placeholder={placeholder}
-          className="input-bordered input w-full max-w-xs"
-        />
+      <div className="form-control ">
+        <div className="input-group">
+          <input
+            onChange={(e) => setSearchValue(e.target.value)}
+            type="text"
+            placeholder={placeholder}
+            className="input-bordered input h-12"
+          />
+          <button className="btn btn-square">
+            <MagnifyingGlassIcon className="h-6 w-6" />
+          </button>
+        </div>
       </div>
     </div>
   );

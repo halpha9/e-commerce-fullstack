@@ -63,7 +63,7 @@ export default function Products({}: Props) {
   return (
     <div className="min-h-screen">
       <div className="w-full pt-12">
-        <p className="text-center text-4xl normal-case underline decoration-secondary">
+        <p className="text-center text-4xl font-semibold normal-case underline decoration-secondary">
           Products
         </p>
       </div>
