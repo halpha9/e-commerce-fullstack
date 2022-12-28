@@ -1,19 +1,22 @@
-import { Product } from "@prisma/client";
-import React, {
-  Dispatch,
-  SetStateAction,
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-} from "react";
+import type { Product } from "@prisma/client";
+import type { Dispatch, SetStateAction } from "react";
+import React, { createContext, useContext, useState, useCallback } from "react";
 import { BASKET_KEY } from "../utils/keys";
 
+interface BasketItem extends Product {
+  quantity: number;
+}
 interface State {
   loading: boolean;
   addItem?: (product: Product) => void;
   removeItem?: (product: Product) => void;
-  products?: Product[] | any[];
+  products?: BasketItem[];
+  subtotal?: number;
+  taxes?: number;
+  shipping?: number;
+  total: number;
+  quantity?: number;
+  discount?: { code: string; amount: number };
 }
 
 const persist = (data: Product[]) => {
@@ -28,10 +31,11 @@ const retrieve = () => {
   return { products: [] };
 };
 
-export interface BasketContextValue extends State {}
+export type BasketContextValue = State;
 
 const initialState: State = {
   loading: true,
+  total: 100,
 };
 
 const BasketContext = createContext({
@@ -54,9 +58,8 @@ function BP({ children }: BasketProps) {
 
   const addItem = useCallback((product: Product) => {
     const items = retrieve();
-    console.log(items);
-
     let newItems;
+
     if (items) {
       const itemExists = items.findIndex(
         (item: Product) => item.id === product.id
@@ -77,14 +80,59 @@ function BP({ children }: BasketProps) {
     }
     persist(newItems);
     setState({ ...state, products: newItems });
+    getQuantity();
+    getBasketValues();
   }, []);
-
 
   const removeItem = useCallback((product: Product) => {
     const items = retrieve();
     const newItems = items.filter((item: Product) => item.id !== product.id);
     persist(newItems);
     setState({ ...state, products: newItems });
+    getBasketValues();
+    getQuantity();
+  }, []);
+
+  const getBasketValues = useCallback(() => {
+    const basketItems: BasketItem[] = retrieve();
+    let total: number = 0;
+    let res = {};
+    if (basketItems && basketItems.length > 0) {
+      const subtotal =
+        (basketItems &&
+          basketItems.length > 0 &&
+          basketItems
+            .map((item: BasketItem) => {
+              return item.price;
+            })
+            .reduce((a, b) => a + b, 0)) ||
+        0;
+      const taxes = subtotal * 0.175;
+      const shipping = 50;
+
+      total = taxes + shipping + subtotal;
+      res = {
+        subtotal,
+        taxes,
+        shipping,
+        total,
+      };
+    }
+    setState((s) => ({ ...s, quantity: total, ...res }));
+  }, []);
+
+  const getQuantity = useCallback(() => {
+    const basketItems: BasketItem[] = retrieve();
+    let total = 0;
+    if (basketItems && basketItems.length > 0) {
+      total = basketItems.reduce((acc, item) => acc + item.quantity, 0);
+    }
+    setState((s) => ({ ...s, quantity: total }));
+  }, []);
+
+  React.useEffect(() => {
+    getBasketValues();
+    getQuantity();
   }, []);
 
   const value = {

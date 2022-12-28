@@ -1,4 +1,4 @@
-import { NextAuthOptions } from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { verify } from "argon2";
 
@@ -34,7 +34,6 @@ export const nextAuthOptions: NextAuthOptions = {
           return {
             id: result.id,
             email,
-            username: result.username,
             role: result.role,
           };
         } catch {
@@ -48,7 +47,6 @@ export const nextAuthOptions: NextAuthOptions = {
       if (user) {
         token.userId = user.id;
         token.email = user.email;
-        token.username = user.username;
         token.role = user.role;
       }
       return token;
@@ -57,7 +55,6 @@ export const nextAuthOptions: NextAuthOptions = {
       if (token) {
         session.user.userId = token.userId;
         session.user.email = token.email;
-        session.user.username = token.username;
         session.user.role = token.role;
       }
       return session;

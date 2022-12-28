@@ -1,5 +1,4 @@
 import { publicProcedure, router } from "./trpc";
-import { productSchema } from "../common/validation/product";
 import { z } from "zod";
 
 export const productRouter = router({

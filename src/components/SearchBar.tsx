@@ -1,4 +1,3 @@
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import * as F from "fuse.js";
 import * as _ from "lodash";
 import React, { useEffect, useRef, useState } from "react";
@@ -29,7 +28,6 @@ export default function SearchBar({
     })
   );
 
-  console.log(originalData);
   useEffect(() => {
     fuse.current = new F.default(originalData, {
       includeMatches: true,
@@ -55,19 +53,16 @@ export default function SearchBar({
     <div className="form-control">
       <div className="input-group">
         <input
-          type="text"
           onChange={(e) =>
             setState((s) => ({
               ...s,
               search: e.target.value,
             }))
           }
+          type="text"
           placeholder={placeholder}
-          className="input input-bordered"
+          className="input-bordered input w-full max-w-xs"
         />
-        <button className="btn btn-square">
-          <MagnifyingGlassIcon className="h-6 w-6" />
-        </button>
       </div>
     </div>
   );

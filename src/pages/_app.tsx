@@ -1,30 +1,26 @@
-import "../styles/globals.css";
-import type { AppProps } from "next/app";
-import type { Session } from "next-auth";
+import { type AppType } from "next/app";
+import { type Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
 
-import { trpc } from "../common/trpc";
+import { trpc } from "../utils/trpc";
+
+import "../styles/globals.css";
+import Layout from "../components/Layout";
 import BasketProvider from "../providers/basket";
-import Layout from "../components.tsx/layout";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
-interface CustomAppProps extends AppProps {
-  pageProps: {
-    session?: Session;
-  } & AppProps["pageProps"];
-}
-
-const CustomApp = ({ Component, pageProps }: CustomAppProps) => {
+const MyApp: AppType<{ session: Session | null }> = ({
+  Component,
+  pageProps: { session, ...pageProps },
+}) => {
   return (
-    <SessionProvider session={pageProps.session}>
+    <SessionProvider session={session}>
       <BasketProvider>
         <Layout>
           <Component {...pageProps} />
         </Layout>
       </BasketProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
     </SessionProvider>
   );
 };
 
-export default trpc.withTRPC(CustomApp);
+export default trpc.withTRPC(MyApp);

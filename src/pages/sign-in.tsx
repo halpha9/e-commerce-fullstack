@@ -1,16 +1,13 @@
+import React, { useCallback } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import { signIn } from "next-auth/react";
 import Head from "next/head";
 import Link from "next/link";
-import { useRouter } from "next/router";
-import React, { useCallback } from "react";
-import { Controller, useForm } from "react-hook-form";
 import type { ILogin } from "../common/validation/auth";
 import { loginSchema } from "../common/validation/auth";
-import { trpc } from "../utils/trpc";
 
-export default function SignUp() {
-  const router = useRouter();
-
+export default function SignIn() {
   const { handleSubmit, control, reset } = useForm<ILogin>({
     defaultValues: {
       email: "",
@@ -19,27 +16,21 @@ export default function SignUp() {
     resolver: zodResolver(loginSchema),
   });
 
-  const { mutateAsync } = trpc.auth.signup.useMutation();
-
   const onSubmit = useCallback(
     async (data: ILogin) => {
       try {
-        const result = await mutateAsync(data);
-        if (result.status === 201) {
-          reset();
-          router.push("/");
-        }
+        await signIn("credentials", { ...data, callbackUrl: "/dashboard" });
+        reset();
       } catch (err) {
         console.error(err);
       }
     },
-    [mutateAsync, router, reset]
+    [reset]
   );
-
   return (
     <div>
       <Head>
-        <title>Register</title>
+        <title>Login</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
@@ -50,8 +41,7 @@ export default function SignUp() {
         >
           <div className="card w-96 bg-base-100 shadow-xl">
             <div className="card-body">
-              <h2 className="card-title">Create an account!</h2>
-
+              <h2 className="card-title">Welcome back!</h2>
               <Controller
                 name="email"
                 control={control}
@@ -77,14 +67,13 @@ export default function SignUp() {
                   />
                 )}
               />
-
               <div className="card-actions items-center justify-between">
-                <Link href="/sign-in" className="link">
-                  Go to login
+                <Link href="/sign-up" className="link">
+                  Go to sign up
                 </Link>
 
-                <button className="btn btn-secondary" type="submit">
-                  Sign Up
+                <button className="btn-secondary btn" type="submit">
+                  Login
                 </button>
               </div>
             </div>

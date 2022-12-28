@@ -11,7 +11,6 @@ async function run() {
     .fill(null)
     .map(() => {
       return {
-        username: faker.internet.userName().toLowerCase(),
         password: faker.internet.password(),
         email: faker.internet.email().toLocaleLowerCase(),
         image: faker.image.avatar(),

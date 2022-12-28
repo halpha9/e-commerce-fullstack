@@ -1,15 +1,14 @@
-import { initTRPC, TRPCError } from "@trpc/server";
+import { TRPCError } from "@trpc/server";
 import { hash } from "argon2";
+import { loginSchema } from "../common/validation/auth";
 
-import { IContext } from "./context";
-import { signUpSchema } from "../common/validation/auth";
 import { publicProcedure, router } from "./trpc";
 
 export const serverRouter = router({
   signup: publicProcedure
-    .input(signUpSchema)
+    .input(loginSchema)
     .mutation(async ({ input, ctx }) => {
-      const { username, email, password } = input;
+      const { email, password } = input;
 
       const exists = await ctx.prisma.user.findFirst({
         where: { email },
@@ -25,7 +24,7 @@ export const serverRouter = router({
       const hashedPassword = await hash(password);
 
       const result = await ctx.prisma.user.create({
-        data: { username, email, password: hashedPassword },
+        data: { email, password: hashedPassword },
       });
 
       return {

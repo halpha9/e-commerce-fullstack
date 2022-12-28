@@ -6,14 +6,13 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite" 
+  provider = "sqlite"
   // NOTE: When using postgresql, mysql or sqlserver, uncomment the @db.Text annotations in model Account below
   // Further reading:
   // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
   // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
   url      = env("DATABASE_URL")
 }
-
 
 model Product {
   id        String   @id @default(cuid())
@@ -25,21 +24,30 @@ model Product {
   price     Int
   quantity  Int
   category  String
-  order    Order[]
+  order    OrderProduct[]
 }
 
 model Order {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  productId String 
-  quantity  Int
   address   String
+  paymentId String @unique
   payment   Payment?
-  status    String
-  userId    String
-  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  status    String  @default("PENDING")
+  userId    String?
+  user      User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   OrderProduct[] 
+}
+
+model OrderProduct {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  productId String 
+  orderId   String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
@@ -85,7 +93,6 @@ model User {
   id            String    @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  username  String   @unique
   email         String   @unique
   password      String
   emailVerified DateTime?

@@ -12,13 +12,13 @@ export default async function handler(
   const { total } = req.body;
 
   const paymentIntent = await stripe.paymentIntents.create({
+    payment_method_types: ["card"],
     amount: total,
     currency: "gbp",
-    automatic_payment_methods: {
-      enabled: true,
-    },
   });
+
   res.send({
     clientSecret: paymentIntent.client_secret,
+    total: total,
   });
 }
