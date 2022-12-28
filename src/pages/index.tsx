@@ -5,6 +5,7 @@ import React from "react";
 import { prisma } from "../common/prisma";
 import type { Product } from "@prisma/client";
 import { currency } from "../utils/formats";
+import Head from "next/head";
 
 const perks = [
   {
@@ -40,9 +41,14 @@ const perks = [
 type Props = {
   products: Product[];
 };
+
 const Home = ({ products }: Props) => {
   return (
     <div className="min-h-screen bg-base-100">
+      <Head>
+        <title>E-commerce</title>
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
       <main>
         <div className="relative">
           <div
