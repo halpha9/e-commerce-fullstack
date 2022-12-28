@@ -61,16 +61,16 @@ export default function Header() {
             </label>
             <ul
               tabIndex={0}
-              className="dropdown-content menu rounded-box menu-compact mt-3 w-52 bg-base-100 p-2 shadow"
+              className="dropdown-content rounded-box menu-compact mt-3 w-52 bg-base-100 p-2 shadow"
             >
               {data?.user?.role === "OWNER" && (
-                <li>
+                <li className="m-1 rounded-lg p-2 active:bg-secondary active:text-gray-800">
                   <Link href="/dashboard" passHref>
                     Dashboard
                   </Link>
                 </li>
               )}
-              <li>
+              <li className="m-1 rounded-lg p-2 active:bg-secondary active:text-gray-800">
                 <button onClick={() => signOut({ callbackUrl: "/sign-in" })}>
                   Logout
                 </button>

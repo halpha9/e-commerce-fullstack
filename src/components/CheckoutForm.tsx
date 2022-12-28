@@ -23,7 +23,7 @@ type State = {
 };
 
 export default function CheckoutForm({ total, products, intentId }: Props) {
-  const { setState: setBasketState } = useBasket();
+  const { clearBasket } = useBasket();
   const { mutateAsync } = trpc.order.addOrder.useMutation();
 
   const stripe = useStripe();
@@ -118,7 +118,7 @@ export default function CheckoutForm({ total, products, intentId }: Props) {
           setState((s) => ({ ...s, message: "An unexpected error occurred." }));
         }
       }
-      setBasketState((s) => ({ ...s, products: [] }));
+      clearBasket && clearBasket();
     } catch (err) {
       console.log(err);
     }

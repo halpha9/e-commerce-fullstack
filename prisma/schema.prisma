@@ -99,7 +99,7 @@ model User {
   password      String
   emailVerified DateTime?
   image         String?
-  role          String  @default("USER")
+  role          String  @default("OWNER")
   accounts      Account[]
   sessions      Session[]
   orders        Order[]

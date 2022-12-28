@@ -10,23 +10,7 @@ import { prisma } from "../../common/prisma";
 import { Fragment } from "react";
 import { Tab } from "@headlessui/react";
 import Image from "next/image";
-
-const product = {
-  name: "Application UI Icon Pack",
-  version: { name: "1.0", date: "June 5, 2021", datetime: "2021-06-05" },
-  price: "$220",
-  description:
-    "The Application UI Icon Pack comes with over 200 icons in 3 styles: outline, filled, and branded. This playful icon pack is tailored for complex application user interfaces with a friendly and legible look.",
-  highlights: [
-    "200+ SVG icons in 3 unique styles",
-    "Compatible with Figma, Sketch, and Adobe XD",
-    "Drawn on 24 x 24 pixel grid",
-  ],
-  imageSrc:
-    "https://tailwindui.com/img/ecommerce-images/product-page-05-product-01.jpg",
-  imageAlt:
-    "Sample of 30 icons with friendly and fun details in outline, filled, and brand color styles.",
-};
+import { currency } from "../../utils/formats";
 
 const reviews = {
   average: 4,
@@ -100,18 +84,12 @@ const license = {
     </ul>
   `,
 };
-const sizes = [
-  { name: "18L", description: "Perfect for a reasonable amount of snacks." },
-  { name: "20L", description: "Enough room for a serious amount of snacks." },
-];
 
 type Props = {
   product: Product;
 };
 
-export default function Product({}: Props) {
-  const [selectedSize, setSelectedSize] = useState(sizes[0]);
-
+export default function Product({ product }: Props) {
   return (
     <div className="min-h-screen">
       <div className="bg-base-100">
@@ -131,18 +109,20 @@ export default function Product({}: Props) {
             {/* Product image */}
             <div className="lg:col-span-4 lg:row-end-1">
               <div className="aspect-w-4 aspect-h-3 overflow-hidden rounded-lg bg-gray-100">
-                <Image
-                  src={product.imageSrc}
-                  alt={product.imageAlt}
-                  sizes="100vw"
-                  style={{
-                    width: "100%",
-                    height: "auto",
-                  }}
-                  width={700}
-                  height={475}
-                  className="object-cover object-center"
-                />
+                {product.image && (
+                  <Image
+                    src={product.image}
+                    alt={product.image}
+                    sizes="100vw"
+                    style={{
+                      width: "100%",
+                      height: "auto",
+                    }}
+                    width={700}
+                    height={475}
+                    className="object-cover object-center"
+                  />
+                )}
               </div>
             </div>
 
@@ -186,7 +166,7 @@ export default function Product({}: Props) {
                   type="button"
                   className="flex w-full items-center justify-center rounded-md border border-transparent bg-secondary py-3 px-8 text-base font-medium text-white transition-all hover:bg-secondary-focus focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 focus:ring-offset-gray-50"
                 >
-                  Pay {product.price}
+                  Pay {currency(product.price)}
                 </button>
                 <button
                   type="button"
@@ -194,19 +174,6 @@ export default function Product({}: Props) {
                 >
                   Preview
                 </button>
-              </div>
-
-              <div className="mt-10 border-t border-gray-200 pt-10">
-                <h3 className="text-sm font-medium text-gray-400">
-                  Highlights
-                </h3>
-                <div className="prose-sm prose mt-4 text-gray-300">
-                  <ul role="list">
-                    {product.highlights.map((highlight) => (
-                      <li key={highlight}>{highlight}</li>
-                    ))}
-                  </ul>
-                </div>
               </div>
 
               <div className="mt-10 border-t border-gray-200 pt-10">

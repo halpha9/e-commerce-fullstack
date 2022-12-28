@@ -481,25 +481,7 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
         )}
         {state.currentTab === Tabs.Customers && (
           <div>
-            <div className="flex w-full self-end px-6">
-              {state.selectedCustomers &&
-                state.selectedCustomers.length > 0 && (
-                  <button
-                    onClick={() => {
-                      if (
-                        confirm(
-                          "Are you sure you want to remove these user(s) ?"
-                        ) == true
-                      ) {
-                        deleteUsers(state.selectedCustomers);
-                      }
-                    }}
-                    className="btn-outline btn btn-square"
-                  >
-                    <TrashIcon className="h-5 w-5" />
-                  </button>
-                )}
-            </div>
+            <div className="flex w-full self-end px-6"></div>
             <div className="rounded-lg border border-gray-700">
               <table className="table w-full">
                 <thead>
@@ -524,9 +506,28 @@ const Dashboard = ({ products, orders, staff, customers }: Props) => {
                         }
                       }}
                     >
-                      <label>
-                        <input type="checkbox" className="checkbox h-5 w-5" />
-                      </label>
+                      <div className="flex items-center">
+                        <label>
+                          <input type="checkbox" className="checkbox h-5 w-5" />
+                        </label>
+                        {state.selectedCustomers &&
+                          state.selectedCustomers.length > 0 && (
+                            <button
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    "Are you sure you want to remove these user(s) ?"
+                                  ) == true
+                                ) {
+                                  deleteUsers(state.selectedCustomers);
+                                }
+                              }}
+                              className="p-1"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          )}
+                      </div>
                     </th>
                     <th>Email</th>
                     <th>Customer Since</th>

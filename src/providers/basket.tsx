@@ -10,6 +10,7 @@ interface State {
   loading: boolean;
   addItem?: (product: Product) => void;
   removeItem?: (product: Product) => void;
+  clearBasket?: () => void;
   products?: BasketItem[];
   subtotal?: number;
   taxes?: number;
@@ -150,11 +151,17 @@ function BP({ children }: BasketProps) {
     setState((s) => ({ ...s, quantity: total }));
   }, []);
 
+  const clearBasket = () => {
+    localStorage.removeItem(BASKET_KEY);
+    setState((s) => ({ ...s, products: [] }));
+  };
+
   const value = {
     ...state,
     setState,
     addItem,
     removeItem,
+    clearBasket,
   };
 
   return (

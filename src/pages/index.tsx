@@ -54,11 +54,11 @@ const Home = ({ products }: Props) => {
               <div className="mx-auto max-w-2xl py-24 lg:max-w-none lg:py-64">
                 <div className="lg:pr-16">
                   <h1 className="text-4xl font-bold tracking-tight text-gray-400 sm:text-5xl xl:text-6xl">
-                    Focus on what matters
+                    The Best Ecommerce Website
                   </h1>
                   <p className="mt-4 text-xl text-gray-300">
-                    All the charts, datepickers, and notifications in the world
-                    can&apos;t beat checking off some items on a paper card.
+                    Fully Responsive thanks to TailwindUI, DaisyUI, and some
+                    trial and error.
                   </p>
                   <div className="mt-6">
                     <Link
