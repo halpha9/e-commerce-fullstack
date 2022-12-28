@@ -1,6 +1,6 @@
 # FullStack E-commmerce Application
 
-This is a Fully Responsive Project Built with `t3`, `stripe`, `prisma`, `trpc`, `supabase.io`, `nextjs`, `faker.js`, `tailwind` `react-query` and a few other libraries.
+This is a Fully Responsive Project Built with `t3`, `stripe`, `prisma`, `trpc`, `supabase.io`, `nextjs`, `faker.js`, `tailwind` `react-query`, `AWS Route53` and a few other libraries.
 
 ## What does this do?
 
