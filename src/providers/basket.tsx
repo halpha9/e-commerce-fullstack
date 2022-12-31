@@ -153,7 +153,7 @@ function BP({ children }: BasketProps) {
 
   const clearBasket = () => {
     localStorage.removeItem(BASKET_KEY);
-    setState((s) => ({ ...s, products: [] }));
+    setState((s) => ({ ...s, products: undefined }));
   };
 
   const value = {
