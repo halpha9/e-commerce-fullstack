@@ -18,6 +18,7 @@ export default function Checkout() {
   const productArr = useMemo(
     () =>
       products &&
+      products.length > 0 &&
       products.map((product) => {
         return {
           id: product.id,
@@ -28,7 +29,7 @@ export default function Checkout() {
   );
 
   React.useEffect(() => {
-    if (productArr && productArr) {
+    if (productArr && productArr.length > 0) {
       fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
